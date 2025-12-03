@@ -1,7 +1,7 @@
 import Report from "../models/Report.js";
-import cloudinary from "../config/cloudinary.js";// Pastikan path ini sesuai dengan struktur folder Anda
+import cloudinary from "../config/cloudinary.js"; // Pastikan path ../config/cloudinary.js benar
 
-// Helper function: Bungkus upload_stream dengan Promise agar bisa di-await
+// Helper function: Upload stream dengan Promise
 const uploadToCloudinary = (buffer) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -18,32 +18,29 @@ const uploadToCloudinary = (buffer) => {
 // CREATE REPORT
 export const createReport = async (req, res) => {
   try {
-    const { title, description, category, location } = req.body;
+    // 1. Ambil data 'type' juga (lost/found)
+    const { title, description, category, location, type, phone} = req.body;
 
-    // Array untuk menampung hasil upload
     let uploadedImages = [];
 
-    // Cek apakah ada file yang diupload
     if (req.files && req.files.length > 0) {
-      // Upload semua file secara paralel menggunakan Promise.all
       const uploadPromises = req.files.map((file) => uploadToCloudinary(file.buffer));
-      
-      // Tunggu sampai semua upload selesai
       const results = await Promise.all(uploadPromises);
 
-      // Map hasil upload ke format yang diinginkan
       uploadedImages = results.map((img) => ({
-        url: img.secure_url, // Gunakan secure_url agar selalu HTTPS
+        url: img.secure_url,
         public_id: img.public_id,
       }));
     }
 
-    // Simpan ke database
+    // 2. Simpan dengan field type
     const report = await Report.create({
       title,
       description,
       category,
       location,
+      type: type || 'lost', // Default ke 'lost' jika kosong
+      phone, 
       images: uploadedImages,
     });
 
@@ -57,11 +54,43 @@ export const createReport = async (req, res) => {
   }
 };
 
-// GET ALL REPORTS
+// GET ALL REPORTS (Dengan Fitur Filter)
 export const getReports = async (req, res) => {
   try {
-    const reports = await Report.find().sort({ createdAt: -1 });
+    // Ambil query params dari URL (dikirim oleh frontend)
+    const { type, category, search, limit } = req.query;
+
+    let query = {};
+
+    // Filter berdasarkan Tipe (Lost / Found)
+    if (type && type !== 'all') {
+      query.type = type;
+    }
+
+    // Filter berdasarkan Kategori
+    if (category && category !== 'all') {
+      query.category = category;
+    }
+
+    // Fitur Search (Mencari di Judul atau Lokasi)
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },    // Case-insensitive
+        { location: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    // Query ke database
+    let reportsQuery = Report.find(query).sort({ createdAt: -1 });
+
+    // Batasi jumlah jika ada parameter limit (misal untuk homepage)
+    if (limit) {
+      reportsQuery = reportsQuery.limit(parseInt(limit));
+    }
+
+    const reports = await reportsQuery;
     res.json({ data: reports });
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
