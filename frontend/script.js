@@ -62,22 +62,34 @@ function navTo(page) {
 }
 
 /* --- Render Cards (works for both API results and local demo objects) --- */
+/* --- Ubah bagian penentuan btnAction di dalam fungsi renderCards di script.js: --- */
+
 function renderCards(items, containerId) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
-
-    if (!items || items.length === 0) {
-        container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--secondary);">Tidak ada data barang.</p>';
-        return;
-    }
-
+    // ... kode lainnya ...
+    
     items.forEach(item => {
-        // support both backend (_id) and local (id)
         const itemId = item._id || item.id;
+        // Asumsi data reporter/finder dan phone sudah tersedia di objek item
+        const reporterName = item.reporter || item.finder || item.finderName || 'Anonim'; //
+        const contactPhone = item.phone || ''; 
+
         const badgeClass = item.type === 'lost' ? 'lost' : (item.status === 'pending' ? 'pending' : 'found');
         const badgeText = item.type === 'lost' ? 'Dicari' : (item.status === 'pending' ? 'Pending' : 'Ditemukan');
         const btnText = item.type === 'lost' ? 'Hubungi Pemilik' : (item.status === 'pending' ? 'Proses...' : 'Klaim Barang');
-        const btnAction = item.type === 'found' && item.status !== 'pending' ? `onclick="openClaimModal('${escapeHtml(item.title)}', '${escapeHtml(item.finder || item.finderName || 'Penemu')}', '${itemId}')"` : '';
+        
+        let btnAction = '';
+        let isDisabled = '';
+
+        // JANGAN LAGI MENGARAHKAN KE openClaimModal secara default
+        // Kini, kedua tipe akan menggunakan fungsi showContactInfo
+        if (item.status === 'pending') {
+             isDisabled = 'disabled';
+        } else {
+            // Gunakan showContactInfo untuk menampilkan kontak
+            btnAction = `onclick="showContactInfo('${escapeHtml(reporterName)}', '${escapeHtml(contactPhone)}', '${item.type}')"`;
+        }
 
         const imageUrl = item.img || item.images?.[0]?.url || 'https://placehold.co/400x300/e2e8f0/808080?text=No+Image';
 
@@ -93,7 +105,7 @@ function renderCards(items, containerId) {
                     <div class="card-meta"><i class="fa-regular fa-calendar"></i> ${escapeHtml(item.date || '')}</div>
                     <p class="card-desc">${escapeHtml(item.desc || '')}</p>
                     <div class="card-footer">
-                        <button class="btn-outline full-width" ${btnAction} ${item.status === 'pending' ? 'disabled' : ''}>${btnText}</button>
+                        <button class="btn-outline full-width" ${btnAction} ${isDisabled}>${btnText}</button>
                     </div>
                 </div>
             </div>
@@ -101,7 +113,6 @@ function renderCards(items, containerId) {
         container.innerHTML += card;
     });
 }
-
 /* ----------------------
    FILTER UI + SEARCH
    ---------------------- */
@@ -406,6 +417,44 @@ function escapeHtml(str = '') {
       .replaceAll("'", '&#39;');
 }
 
+/* --- Tambahkan fungsi baru di bagian Helpers dalam script.js --- */
+function showContactInfo(reporterName, contactPhone, itemType) {
+    if (!contactPhone || !reporterName) {
+        alert('Informasi kontak belum tersedia untuk item ini.');
+        return;
+    }
+
+    const typeLabel = itemType === 'lost' ? 'Pemilik (Pelapor Hilang)' : 'Penemu (Pelapor Ditemukan)';
+    
+    const message = `Kontak ${typeLabel}:\n` +
+                    `Nama: ${reporterName}\n` +
+                    `WhatsApp: ${contactPhone}\n\n` +
+                    `Apakah Anda ingin langsung menghubungi via WhatsApp?`;
+
+    // Menggunakan confirm untuk menawarkan opsi menghubungi langsung
+    const confirmed = confirm(message);
+
+    if (confirmed) {
+        // Panggil fungsi contactOwner yang disarankan di respon sebelumnya
+        contactOwner(contactPhone);
+    }
+}
+// Pastikan fungsi ini tersedia secara global
+window.showContactInfo = showContactInfo;
+
+// Anda juga perlu fungsi contactOwner jika belum menambahkannya dari saran sebelumnya
+function contactOwner(phone) {
+    let formattedPhone = phone.replace(/[^0-9]/g, '');
+    if (formattedPhone.startsWith('0')) {
+        formattedPhone = '62' + formattedPhone.substring(1);
+    }
+    
+    const message = encodeURIComponent('Halo, saya melihat laporan barang di TemUIN dan ingin konfirmasi: ');
+    const url = `https://wa.me/${formattedPhone}?text=${message}`;
+    
+    window.open(url, '_blank');
+}
+window.contactOwner = contactOwner; // Tambahkan ini ke global scope
 /* ----------------------
    Attach global handlers that HTML expects
    (keperluan form onsubmit dll) - keep names
