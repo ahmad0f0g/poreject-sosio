@@ -47,7 +47,7 @@ main { min-height: 80vh; padding-bottom: 4rem; }
 .hero p { font-size: 1.2rem; color: var(--secondary); margin-bottom: 2rem; max-width: 600px; margin: 0 auto 2rem auto; }
 .hero-buttons { display: flex; gap: 1rem; justify-content: center; }
 .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); padding: 0.6rem 1.5rem; border-radius: var(--radius); font-weight: 600; cursor: pointer; transition: 0.3s; }
-.btn-outline:hover { background: var(--primary); color: white; }
+.btn-outline:hover { background: var(--primary); color: rgb(255, 255, 255); }
 
 /* --- CARDS & GRID --- */
 .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; }
