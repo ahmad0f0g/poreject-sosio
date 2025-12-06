@@ -207,12 +207,11 @@ async function handleReportSubmit(e) {
     const imageInput = document.getElementById('input-image');
     const file = imageInput && imageInput.files && imageInput.files[0] ? imageInput.files[0] : null;
 
-    // Tambahan untuk laporan 'found' (5 Ciri Rahasia)
+    // Tambahan untuk laporan 'found' (3 Ciri Rahasia)
     const secret1 = document.getElementById('input-secret-1').value.trim();
     const secret2 = document.getElementById('input-secret-2').value.trim();
     const secret3 = document.getElementById('input-secret-3').value.trim();
-    const secret4 = document.getElementById('input-secret-4').value.trim();
-    const secret5 = document.getElementById('input-secret-5').value.trim();
+   
         
     // Validasi khusus untuk 2 ciri rahasia wajib
     if (!secret1 || !secret2) {
@@ -237,12 +236,10 @@ async function handleReportSubmit(e) {
     formData.append('description', desc);
     formData.append('type', 'found'); // SELALU 'found'
 
-    // Tambahkan 5 ciri rahasia
+    // Tambahkan 3 ciri rahasia
     formData.append('secret1', secret1);
     formData.append('secret2', secret2);
     formData.append('secret3', secret3);
-    formData.append('secret4', secret4);
-    formData.append('secret5', secret5);
 
     if (file) {
         formData.append('images', file); // name 'images' to match backend middleware
